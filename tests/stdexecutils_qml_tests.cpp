@@ -32,6 +32,9 @@ public:
 			throw std::runtime_error("error");
 		}());
 	}
+	Q_INVOKABLE QmlReceiver* startStopped() {
+		return new QmlReceiver(stdexec::just_stopped());
+	}
 public slots:
 	void success(bool success) { //
 		ASSERT_TRUE(success);
@@ -59,9 +62,8 @@ protected:
 	QJSEngine        engine;
 };
 
-
 TEST_F(QMLTestFixture, voidResult) {
-  engine.evaluate(R"(
+	engine.evaluate(R"(
   (function() {
       functions.startVoidValue().then(() => {
           functions.success(true);
@@ -72,11 +74,11 @@ TEST_F(QMLTestFixture, voidResult) {
       });
   })()
 )");
-  application.exec();
+	application.exec();
 }
 
 TEST_F(QMLTestFixture, stringResult) {
-  engine.evaluate(R"(
+	engine.evaluate(R"(
   (function() {
       functions.startStringValue().then((result) => {
           functions.success(result === "test123456");
@@ -87,11 +89,11 @@ TEST_F(QMLTestFixture, stringResult) {
       });
   })()
 )");
-  application.exec();
+	application.exec();
 }
 
 TEST_F(QMLTestFixture, twoValuesResult) {
-  engine.evaluate(R"(
+	engine.evaluate(R"(
   (function() {
       functions.startTwoValues().then((a, b) => {
           functions.success(a === "test123456" && b === 42);
@@ -102,7 +104,7 @@ TEST_F(QMLTestFixture, twoValuesResult) {
       });
   })()
 )");
-  application.exec();
+	application.exec();
 }
 
 TEST_F(QMLTestFixture, errorTest) {
@@ -114,6 +116,21 @@ TEST_F(QMLTestFixture, errorTest) {
 	        functions.success(error === "error");
 	    }, () => {
 	        functions.failure();
+	    });
+	})()
+)");
+	application.exec();
+}
+
+TEST_F(QMLTestFixture, stoppedTest) {
+	engine.evaluate(R"(
+	(function() {
+	    functions.startStopped().then(() => {
+	        functions.failure();
+	    }, () => {
+	        functions.failure();
+	    }, () => {
+	        functions.success(true);
 	    });
 	})()
 )");

@@ -1,0 +1,13 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+find_dependency(stdexec REQUIRED)
+if(@WITH_QML@)
+find_dependency(Qt6 REQUIRED COMPNENTS Core Qml)
+else()
+find_dependency(Qt6 REQUIRED COMPNENTS Core)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/@PROJECT_NAME@Targets.cmake")
+
+check_required_components(@PROJECT_NAME@)

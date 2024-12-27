@@ -65,18 +65,22 @@ class QmlReceiver : public QObject {
 	Q_OBJECT
 public:
 	struct receiver_env {
-		explicit receiver_env(QObject& obj) noexcept : m_obj(obj) {}
+		explicit receiver_env(QmlReceiver& obj) noexcept : m_receiver(obj) {}
 		auto query(stdexec::get_scheduler_t) const noexcept -> QThreadScheduler {
-			return QThreadScheduler{&m_obj};
+			return QThreadScheduler{&m_receiver};
 		}
 
 		auto query(stdexec::get_delegatee_scheduler_t) const noexcept
 		    -> QThreadScheduler {
-			return QThreadScheduler{&m_obj};
+			return QThreadScheduler{&m_receiver};
+		}
+
+		auto query(stdexec::get_stop_token_t) const noexcept {
+			return m_receiver.m_stopSource.get_token();
 		}
 
 	private:
-		QObject& m_obj;
+		QmlReceiver& m_receiver;
 	};
 
 	template <stdexec::queryable Env>
@@ -191,15 +195,21 @@ public:
 	                      QJSValue stoppedFunction = {});
 
 public slots:
-	void requestStop() {}
+	void requestStop() noexcept { 
+		m_stopSource.request_stop();
+	}
 
 private:
 	template <stdexec::queryable Env>
 	friend struct receiver;
 
+	friend struct receiver_env;
+
 	QJSValue m_onValue   = QJSValue::UndefinedValue;
 	QJSValue m_onError   = QJSValue::UndefinedValue;
 	QJSValue m_onStopped = QJSValue::UndefinedValue;
+
+	stdexec::inplace_stop_source m_stopSource;
 };
 
 } // namespace stdexecutils::qt

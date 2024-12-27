@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.24)
 
 #Options
-option(TREAT_WARNINGS_AS_ERRORS "Treat warnings as errors" TRUE)
 option(BUILD_TESTS "Build unit-tests" TRUE)
+option(BUILD_QML "Build Qml Types" FALSE)
 option(ENABLE_CLANG_TIDY "Run clang-tidy with the build, makes the build slower" FALSE)
 option(BUILD_COVERAGE "Generate Code-Coverage Information " FALSE)
 
@@ -40,7 +40,13 @@ project(${CONAN_PACKAGE_NAME}
 
 find_package(stdexec REQUIRED)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Qml) 
+message(WARN "QML build: ${BUILD_QML}")
+if(${BUILD_QML})
+    message(WARN "QML enabled!!!")
+    find_package(Qt6 REQUIRED COMPONENTS Core Qml) 
+else()
+    find_package(Qt6 REQUIRED COMPONENTS Core)
+endif()
 qt_standard_project_setup(REQUIRES 6.5)
 
 
@@ -50,8 +56,6 @@ include(cmake/compiler_warnings.cmake)
 #Library Target
 qt_add_library(${PROJECT_NAME} STATIC)
 
-set_project_warnings(${PROJECT_NAME} WARNINGS_AS_ERRORS ${TREAT_WARNINGS_AS_ERRORS})
-
 set_target_properties(${PROJECT_NAME} PROPERTIES 
   CXX_STANDARD 20
   CXX_STANDARD_REQUIRED True
@@ -59,7 +63,19 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   SOVERSION ${PROJECT_VERSION}
 )
 
-target_link_libraries(${PROJECT_NAME} PUBLIC STDEXEC::stdexec Qt6::Core Qt6::Qml)
+target_link_libraries(${PROJECT_NAME} PUBLIC STDEXEC::stdexec Qt6::Core)
+
+set(HEADERS include/stdexecutils/qt/qthread_scheduler.hpp)
+
+if(BUILD_QML)
+    list(APPEND HEADERS
+        include/stdexecutils/qt/qml_receiver.hpp
+    )
+    list(APPEND SOURCES
+        src/qml_receiver.cpp
+    )
+    target_link_libraries(${PROJECT_NAME} PUBLIC Qt6::Qml)
+endif()
 
 target_sources(${PROJECT_NAME} 
     PUBLIC 
@@ -67,10 +83,9 @@ target_sources(${PROJECT_NAME}
         BASE_DIRS
             include
         FILES
-            include/stdexecutils/qt/qthread_scheduler.hpp
-            include/stdexecutils/qt/qml_receiver.hpp
+            ${HEADERS}
     PRIVATE
-        src/qml_receiver.cpp
+        ${SOURCES}
 )
 
 #Set coverage flags

@@ -15,8 +15,8 @@ class StdexecutilsConan(ConanFile):
 
     # Binary configuration
     settings = "os", "compiler", "build_type", "arch"
-    options = {"qml": [True, False]}
-    default_options = {"qml": False}
+    options = {"qml": [True, False], "shared": [True, False]}
+    default_options = {"qml": False, "shared": False}
 
     # generators
     generators = ["CMakeDeps"]
@@ -63,6 +63,7 @@ class StdexecutilsConan(ConanFile):
         tc.cache_variables["CONAN_PACKAGE_VERSION"] = self.version
         tc.cache_variables["CONAN_PACKAGE_DESCRIPTION"] = self.description
         tc.cache_variables["CONAN_PACKAGE_URL"] = self.url
+        tc.cache_variables["BUILD_QML"] = self.options.qml
         tc.generate()
 
     def build(self):

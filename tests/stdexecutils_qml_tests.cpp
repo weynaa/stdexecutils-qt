@@ -35,6 +35,9 @@ public:
 	Q_INVOKABLE QmlReceiver* startStopped() {
 		return new QmlReceiver(stdexec::just_stopped());
 	}
+	Q_INVOKABLE QmlReceiver* startDelay() {
+		return new QmlReceiver(QThreadScheduler(this).schedule_after(std::chrono::seconds(1)));
+	}
 public slots:
 	void success(bool success) { //
 		ASSERT_TRUE(success);
@@ -132,6 +135,23 @@ TEST_F(QMLTestFixture, stoppedTest) {
 	    }, () => {
 	        functions.success(true);
 	    });
+	})()
+)");
+	application.exec();
+}
+
+TEST_F(QMLTestFixture, requestStopTest) {
+	engine.evaluate(R"(
+	(function() {
+		let promise = functions.startDelay();
+	    promise.then(() => {
+	        functions.failure();
+	    }, () => {
+	        functions.failure();
+	    }, () => {
+	        functions.success(true);
+	    });
+		promise.requestStop();
 	})()
 )");
 	application.exec();

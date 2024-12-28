@@ -9,7 +9,7 @@
 #include <stdexecutils/qt/qthread_scheduler.hpp>
 
 #include <QObject>
-#include <QQmlEngine>
+#include <QJSEngine>
 
 namespace stdexecutils::qt {
 namespace detail {

@@ -12,6 +12,8 @@ class StdexecutilsConan(ConanFile):
     author = "mwechner"
     url = "https://github.com/weynaa/stdexecutils-qt"
     description = "Utilities extending the P2300 senders for Qt"
+   
+    package_type = "library" 
 
     # Binary configuration
     settings = "os", "compiler", "build_type", "arch"
@@ -23,11 +25,11 @@ class StdexecutilsConan(ConanFile):
 
     # Add dependencies here
     def requirements(self):
-        self.requires("stdexec/2024.09", visible = True)
-        self.requires("qt/[>=5.15 <7]", visible = True, options = { 
-                                                                    "shared": True,
-                                                                    "qtdeclarative": self.options.qml
-                                                                    })
+        self.requires("stdexec/2024.09")
+        self.requires("qt/[>=5.15 <7]", options = { 
+                                                    "shared": True,
+                                                    "qtdeclarative": self.options.qml
+                                                    })
 
     # Add dependencies for building the package here
     def build_requirements(self):
@@ -70,7 +72,7 @@ class StdexecutilsConan(ConanFile):
         cmake = CMake(self)
         cmake.configure()
         cmake.build()
-        cmake.test(env=['CTEST_OUTPUT_ON_FAILURE=1'])
+        cmake.ctest(cli_args=['--output-on-failure'])
 
     def package(self):
         cmake = CMake(self)

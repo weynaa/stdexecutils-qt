@@ -1,5 +1,7 @@
 #include <stdexecutils/qt/qml_receiver.hpp>
 
+#include <QtQml>
+
 namespace stdexecutils::qt {
 
 void QmlReceiver::registerMetatype(const char* moduleUri /*= "QmlReceiver"*/,

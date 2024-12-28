@@ -1,9 +1,10 @@
-#include <stdexecutils/spawn_stdfuture.hpp>
+#include <stdexecutils/qt/qthread_scheduler.hpp>
 
-#include <cstdlib>
+#include <QObject>
 
+using namespace stdexecutils::qt;
+
+static_assert(stdexec::scheduler<QThreadScheduler>, "QThreadScheduler is not adhering to the scheduler concept");
 int main() {
-	auto fut = stdexecutils::spawn_stdfuture(stdexec::just(42));
-	const auto [result] = *fut.get();
-	return result == 42 ? EXIT_SUCCESS : EXIT_FAILURE;
+	return 0;
 }

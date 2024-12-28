@@ -8,6 +8,7 @@
 
 #include <QCoreApplication>
 #include <QJSEngine>
+#include <QtQml>
 
 using namespace stdexecutils::qt;
 

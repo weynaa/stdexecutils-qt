@@ -25,11 +25,15 @@ class StdexecutilsConan(ConanFile):
 
     # Add dependencies here
     def requirements(self):
-        self.requires("stdexec/2024.09")
-        self.requires("qt/[>=5.15 <7]", options = { 
-                                                    "shared": True,
-                                                    "qtdeclarative": self.options.qml
-                                                    })
+        self.requires("stdexec/2024.09", transitive_headers=True, transitive_libs=True)
+        self.requires("qt/[>=5.15 <7]", 
+                        options = { 
+                            "shared": True,
+                            "qtdeclarative": self.options.qml
+                        },
+                        transitive_headers = True,
+                        transitive_libs = True
+                    )
 
     # Add dependencies for building the package here
     def build_requirements(self):

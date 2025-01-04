@@ -109,13 +109,14 @@ public:
 		void set_value(Args&&... args) noexcept {
 			QMetaObject::invokeMethod(
 			    &m_recieverObj,
-			    [... args = std::forward<Args>(args)](QmlReceiver* receiverObj) {
+			    [... args = std::forward<Args>(args),
+			     receiverObj = &m_recieverObj]() {
 				    if (receiverObj->m_onValue.isCallable()) {
 					    receiverObj->m_onValue.call(
 					        detail::toValueList(qjsEngine(receiverObj), args...));
 				    }
 			    },
-			    Qt::QueuedConnection, &m_recieverObj);
+			    Qt::QueuedConnection);
 			delete m_opState;
 			m_opState = nullptr;
 		}
@@ -124,13 +125,14 @@ public:
 		void set_error(Args&&... args) noexcept {
 			QMetaObject::invokeMethod(
 			    &m_recieverObj,
-			    [... args = std::forward<Args>(args)](QmlReceiver* receiverObj) {
+			    [... args    = std::forward<Args>(args),
+			     receiverObj = &m_recieverObj]() {
 				    if (receiverObj->m_onError.isCallable()) {
 					    receiverObj->m_onError.call(
 					        detail::toValueList(qjsEngine(receiverObj), args...));
 				    }
 			    },
-			    Qt::QueuedConnection, &m_recieverObj);
+			    Qt::QueuedConnection);
 			delete m_opState;
 			m_opState = nullptr;
 		}
@@ -138,12 +140,12 @@ public:
 		void set_stopped() noexcept {
 			QMetaObject::invokeMethod(
 			    &m_recieverObj,
-			    [](QmlReceiver* recieverObj) {
-				    if (recieverObj->m_onStopped.isCallable()) {
-					    recieverObj->m_onStopped.call();
+			    [receiverObj = &m_recieverObj]() {
+				    if (receiverObj->m_onStopped.isCallable()) {
+					    receiverObj->m_onStopped.call();
 				    }
 			    },
-			    Qt::QueuedConnection, &m_recieverObj);
+			    Qt::QueuedConnection);
 			delete m_opState;
 			m_opState = nullptr;
 		}

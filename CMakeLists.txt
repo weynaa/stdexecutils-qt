@@ -40,21 +40,31 @@ project(${CONAN_PACKAGE_NAME}
 
 find_package(stdexec REQUIRED)
 
-message(WARN "QML build: ${BUILD_QML}")
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
+
+message("Qt Version: ${QT_VERSION_MAJOR}")
 if(${BUILD_QML})
-    message(WARN "QML enabled!!!")
-    find_package(Qt6 REQUIRED COMPONENTS Core Qml) 
+    find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Qml) 
 else()
-    find_package(Qt6 REQUIRED COMPONENTS Core)
+    find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core)
 endif()
-qt_standard_project_setup(REQUIRES 6.5)
+
+if(${QT_VERSION_MAJOR} EQUAL 6)
+    qt_standard_project_setup(REQUIRES 6.5)
+else()
+    set(CMAKE_AUTOMOC TRUE)
+endif()
 
 
 #Compiler Warnings
 include(cmake/compiler_warnings.cmake)
 
-#Library Target
-qt_add_library(${PROJECT_NAME} STATIC)
+#Library 
+if(${QT_VERSION_MAJOR} EQUAL 6)
+    qt_add_library(${PROJECT_NAME} STATIC)
+else()
+    add_library(${PROJECT_NAME} STATIC)
+endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES 
   CXX_STANDARD 20
@@ -63,7 +73,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   SOVERSION ${PROJECT_VERSION}
 )
 
-target_link_libraries(${PROJECT_NAME} PUBLIC STDEXEC::stdexec Qt6::Core)
+target_link_libraries(${PROJECT_NAME} PUBLIC STDEXEC::stdexec Qt${QT_VERSION_MAJOR}::Core)
 
 set(HEADERS include/stdexecutils/qt/qthread_scheduler.hpp)
 
@@ -74,7 +84,7 @@ if(BUILD_QML)
     list(APPEND SOURCES
         src/qml_receiver.cpp
     )
-    target_link_libraries(${PROJECT_NAME} PUBLIC Qt6::Qml)
+    target_link_libraries(${PROJECT_NAME} PUBLIC Qt${QT_VERSION_MAJOR}::Qml)
 endif()
 
 target_sources(${PROJECT_NAME} 

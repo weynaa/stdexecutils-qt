@@ -10,6 +10,8 @@ void QmlReceiver::registerMetatype(const char* moduleUri /*= "QmlReceiver"*/,
 	qmlRegisterUncreatableType<QmlReceiver>(
 	    moduleUri, moduleVersionMajor, moduleVersionMinor, "QmlReceiver",
 	    "senders can only be launched in C++");
+	
+	qRegisterMetaType<QmlReceiver*>("QmlReceiver*");
 }
 
 void QmlReceiver::then(QJSValue valueFunction, QJSValue failedFunction /*= {}*/,

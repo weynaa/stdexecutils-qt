@@ -53,8 +53,9 @@ class QMLTestFixture : public testing::Test {
 public:
 	QMLTestFixture() : application(argc, nullptr), engine(&application) {
 
-		QmlReceiver::registerMetatype("TestModule");
-		qmlRegisterType<LaunchFunctions>("TestModule", 1, 0, "Functions");
+		QmlReceiver::registerMetatype("TestModule", 1, 0);
+		auto type2 = qmlRegisterUncreatableType<LaunchFunctions>("TestModule", 1, 0,
+		                                                         "Functions", "is created in C++");
 		auto functions = new LaunchFunctions();
 		engine.installExtensions(QJSEngine::ConsoleExtension);
 		engine.globalObject().setProperty("functions",
@@ -67,7 +68,7 @@ protected:
 };
 
 TEST_F(QMLTestFixture, voidResult) {
-	engine.evaluate(R"(
+	const auto result = engine.evaluate(R"(
   (function() {
       functions.startVoidValue().then(() => {
           functions.success(true);
@@ -78,6 +79,8 @@ TEST_F(QMLTestFixture, voidResult) {
       });
   })()
 )");
+	ASSERT_FALSE(result.isError());
+
 	application.exec();
 }
 
@@ -97,7 +100,7 @@ TEST_F(QMLTestFixture, stringResult) {
 }
 
 TEST_F(QMLTestFixture, twoValuesResult) {
-	engine.evaluate(R"(
+	const auto result = engine.evaluate(R"(
   (function() {
       functions.startTwoValues().then((a, b) => {
           functions.success(a === "test123456" && b === 42);
@@ -108,11 +111,13 @@ TEST_F(QMLTestFixture, twoValuesResult) {
       });
   })()
 )");
+	ASSERT_FALSE(result.isError());
+
 	application.exec();
 }
 
 TEST_F(QMLTestFixture, errorTest) {
-	engine.evaluate(R"(
+	const auto result = engine.evaluate(R"(
 	(function() {
 	    functions.startException().then(() => {
 	        functions.failure();
@@ -123,11 +128,12 @@ TEST_F(QMLTestFixture, errorTest) {
 	    });
 	})()
 )");
+	ASSERT_FALSE(result.isError());
 	application.exec();
 }
 
 TEST_F(QMLTestFixture, stoppedTest) {
-	engine.evaluate(R"(
+	const auto result = engine.evaluate(R"(
 	(function() {
 	    functions.startStopped().then(() => {
 	        functions.failure();
@@ -138,11 +144,12 @@ TEST_F(QMLTestFixture, stoppedTest) {
 	    });
 	})()
 )");
+	ASSERT_FALSE(result.isError());
 	application.exec();
 }
 
 TEST_F(QMLTestFixture, requestStopTest) {
-	engine.evaluate(R"(
+	const auto result = engine.evaluate(R"(
 	(function() {
 		let promise = functions.startDelay();
 	    promise.then(() => {
@@ -155,6 +162,7 @@ TEST_F(QMLTestFixture, requestStopTest) {
 		promise.requestStop();
 	})()
 )");
+	ASSERT_FALSE(result.isError());
 	application.exec();
 }
 

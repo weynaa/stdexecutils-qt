@@ -2,6 +2,8 @@
 #include <exec/async_scope.hpp>
 #include <gtest/gtest.h>
 #include <stdexecutils/qt/qthread_scheduler.hpp>
+#include <stdexecutils/qt/qthreadpool_scheduler.hpp>
+#include <thread>
 
 using namespace stdexecutils::qt;
 
@@ -11,7 +13,6 @@ static_assert(stdexec::scheduler<QThreadScheduler>,
               "scheduler is not fulfilling the concept");
 
 TEST(QThreadScheduler, BasicSchedulingContinuation) {
-
 	int              argc = 0;
 	QCoreApplication application(argc, nullptr);
 
@@ -176,4 +177,28 @@ TEST(QThreadScheduler, ScheduleAfterStopped) {
 	scope.spawn(scheduler.schedule_after(100ms) |
 	            stdexec::then([&]() { scope.request_stop(); }));
 	application.exec();
+}
+
+TEST(ThreadpoolScheduler, BasicWorks){
+	QThreadPool threadpool;
+	
+	const auto opt_tid = stdexec::sync_wait(stdexec::schedule(qthread_scheduler(&threadpool)) | stdexec::then([](){
+		return std::this_thread::get_id();
+	}));
+	ASSERT_TRUE(opt_tid.has_value());
+	EXPECT_NE(std::get<0>(*opt_tid), std::this_thread::get_id());
+}
+
+TEST(ThreadpoolScheduler, BasicStops){
+	exec::async_scope scope;
+	scope.request_stop();
+
+	bool stopped {false};
+	QThreadPool pool;
+	scope.spawn(stdexec::schedule(qthread_scheduler(&pool))| stdexec::upon_stopped([&](){
+		stopped = true;
+	}));
+	
+	stdexec::sync_wait(scope.on_empty());
+	EXPECT_TRUE(stopped);	
 }

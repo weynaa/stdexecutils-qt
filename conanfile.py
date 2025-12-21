@@ -34,10 +34,11 @@ class StdexecutilsConan(ConanFile):
                         transitive_headers = True,
                         transitive_libs = True
                     )
-
+    
     # Add dependencies for building the package here
     def build_requirements(self):
         self.test_requires("gtest/[>=1.15 <2]")
+        self.tool_requires("ninja/[>=1.13 <2]")
 
     def layout(self):
         cmake_layout(self)
@@ -64,7 +65,7 @@ class StdexecutilsConan(ConanFile):
         git.checkout(commit=sources["commit"])
 
     def generate(self):
-        tc = CMakeToolchain(self)
+        tc = CMakeToolchain(self, generator='Ninja')
         tc.cache_variables["CONAN_PACKAGE_NAME"] = self.name
         tc.cache_variables["CONAN_PACKAGE_VERSION"] = self.version
         tc.cache_variables["CONAN_PACKAGE_DESCRIPTION"] = self.description

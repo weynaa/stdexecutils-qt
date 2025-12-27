@@ -27,25 +27,15 @@ struct threadpool_op_state {
 		    stdexec::get_stop_token(stdexec::get_env(m_recv));
 		if (stop_token.stop_requested()) {
 			stdexec::set_stopped(std::move(m_recv));
-            return;
+			return;
 		}
 
-		if (stop_token.stop_possible()) {
-			m_pool->start([this, stop_token = std::move(stop_token)]() {
-                if(stop_token.stop_requested()){
-                    stdexec::set_stopped(std::move(m_recv));
-                } else {
-                    stdexec::set_value(std::move(m_recv));
-                }
-			});
-		} else {
-			m_pool->start([this]() { stdexec::set_value(std::move(m_recv)); });
-		}
+		m_pool->start([this]() { stdexec::set_value(std::move(m_recv)); });
 	}
 
 private:
-	Recv                             m_recv;
-	QThreadPool* const               m_pool;
+	Recv               m_recv;
+	QThreadPool* const m_pool;
 };
 
 struct threadpool_sender {
@@ -93,8 +83,8 @@ auto threadpool_env::query(stdexec::get_completion_scheduler_t<CompletionTag>)
 
 } // namespace detail
 
-stdexec::scheduler auto
-inline qthread_scheduler(QThreadPool* pool = QThreadPool::globalInstance()) {
+stdexec::scheduler auto inline qthread_scheduler(
+    QThreadPool* pool = QThreadPool::globalInstance()) {
 	return detail::threadpool_scheduler(pool);
 }
 } // namespace stdexecutils::qt

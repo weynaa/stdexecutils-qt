@@ -2,15 +2,18 @@
 #define STDEXEC_UTILS_QTHREAD_SCHEDULER_HPP
 
 #include <QAbstractEventDispatcher>
+#include <QBasicTimer>
 #include <QObject>
 #include <QThread>
-#include <QTimer>
+#include <QTimerEvent>
+#include <stdexec/__detail/__execution_fwd.hpp>
 
 #ifndef Q_MOC_RUN
 #include <stdexec/execution.hpp>
 #endif
 
 #include <chrono>
+#include <optional>
 
 namespace stdexecutils::qt {
 
@@ -89,7 +92,7 @@ public:
 
 	// Operation state for schedule_at and scheduler_after
 	template <class Recv>
-	struct timeout_op_state {
+	struct timeout_op_state : public QObject {
 
 		using deadline_or_delay =
 		    std::variant<std::chrono::system_clock::time_point,
@@ -97,13 +100,10 @@ public:
 
 		timeout_op_state(Recv&& receiver, QThread* thread,
 		                 deadline_or_delay deadlineOrDelay)
-		    : m_receiver(std::move(receiver)), m_thread(thread),
-		      m_deadlineOrDelay(deadlineOrDelay), m_timer(new QTimer(m_thread)) {}
-
-		timeout_op_state(const timeout_op_state&) = delete;
-		timeout_op_state(timeout_op_state&&)      = delete;
-
-		~timeout_op_state() { delete m_timer; }
+		    : QObject(nullptr), m_receiver(std::move(receiver)),
+		      m_deadlineOrDelay(deadlineOrDelay) {
+			moveToThread(thread);
+		}
 
 		void start() noexcept {
 			stdexec::stoppable_token auto stop_token =
@@ -113,9 +113,11 @@ public:
 				stdexec::set_stopped(std::move(m_receiver));
 				return;
 			}
-			m_done = false;
+			const auto t = thread();
+			connect(qApp, &QCoreApplication::aboutToQuit,
+			        [this]() { handle_stopped(); });
+			connect(thread(), &QThread::finished, [this]() { handle_stopped(); });
 
-			m_timer->setSingleShot(true);
 			const auto intervalFromNow =
 			    std::holds_alternative<std::chrono::system_clock::time_point>(
 			        m_deadlineOrDelay)
@@ -127,51 +129,59 @@ public:
 			              std::get<std::chrono::system_clock::duration>(
 			                  m_deadlineOrDelay));
 
-			m_timer->setInterval(
-			    std::max(std::chrono::milliseconds(0), intervalFromNow));
-			QObject::connect(
-			    m_timer, &QTimer::timeout, m_timer,
-			    [this]() {
-				    auto done = m_done.load();
-				    if (!done && m_done.compare_exchange_strong(done, true)) {
-					    m_stoppedCallback.reset();
-					    stdexec::set_value(std::move(m_receiver));
-				    }
-			    },
-			    Qt::QueuedConnection);
-			m_timer->start();
-			if (stop_token.stop_possible()) {
+			if (intervalFromNow.count() < 0) {
+				QMetaObject::invokeMethod(
+				    this, [this]() { stdexec::set_value(std::move(m_receiver)); },
+				    Qt::QueuedConnection);
+				return;
+			}
 
-				m_stoppedCallback = std::make_unique<stop_callback>(
-				    std::move(stop_token), stop_callback_fun{*this});
+			m_timer.start(intervalFromNow, this);
+			if (stop_token.stop_possible()) {
+				m_stoppedCallback.emplace(std::move(stop_token),
+				                          stop_callback_fun{*this});
 			}
 		}
 
 	private:
+		void timerEvent(QTimerEvent* ev) override {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+			assert(ev->id() == m_timer.id());
+#endif
+			if (m_done) {
+				return;
+			}
+			m_done = true;
+			m_timer.stop();
+			stdexec::set_value(std::move(m_receiver));
+		}
+
 		struct stop_callback_fun {
 			timeout_op_state& op_state;
 
 			void operator()() {
-				auto done = op_state.m_done.load();
-				if (!done && op_state.m_done.compare_exchange_strong(done, true)) {
-					op_state.m_timer->stop();
-					QMetaObject::invokeMethod(
-					    op_state.m_thread->eventDispatcher(),
-					    [=]() { stdexec::set_stopped(std::move(op_state.m_receiver)); },
-					    Qt::QueuedConnection);
-				}
+				QMetaObject::invokeMethod(&op_state,
+				                          [this]() { op_state.handle_stopped(); });
 			}
 		};
+		void handle_stopped() {
+			if (m_done) {
+				return;
+			}
+			m_done = true;
+			m_timer.stop();
+			stdexec::set_stopped(std::move(m_receiver));
+		}
+
 		friend struct stop_callback_fun;
 		using stop_callback = stdexec::stop_callback_for_t<
 		    stdexec::stop_token_of_t<stdexec::env_of_t<Recv>>, stop_callback_fun>;
 
-		Recv                           m_receiver;
-		QThread* const                 m_thread;
-		const deadline_or_delay        m_deadlineOrDelay;
-		QTimer* const                  m_timer;
-		std::atomic_bool               m_done;
-		std::unique_ptr<stop_callback> m_stoppedCallback;
+		Recv                         m_receiver;
+		const deadline_or_delay      m_deadlineOrDelay;
+		QBasicTimer                  m_timer;
+		bool                         m_done{false};
+		std::optional<stop_callback> m_stoppedCallback;
 	};
 
 	// Sender for schedule_at

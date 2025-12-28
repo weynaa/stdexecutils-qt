@@ -113,10 +113,10 @@ public:
 				stdexec::set_stopped(std::move(m_receiver));
 				return;
 			}
-			const auto t = thread();
-			connect(qApp, &QCoreApplication::aboutToQuit,
-			        [this]() { handle_stopped(); });
-			connect(thread(), &QThread::finished, [this]() { handle_stopped(); });
+			connect(qApp, &QCoreApplication::aboutToQuit, this,
+			        &timeout_op_state::handle_stopped);
+			connect(thread(), &QThread::finished, this,
+			        &timeout_op_state::handle_stopped);
 
 			const auto intervalFromNow =
 			    std::holds_alternative<std::chrono::system_clock::time_point>(
@@ -164,6 +164,7 @@ public:
 				                          [this]() { op_state.handle_stopped(); });
 			}
 		};
+	private Q_SLOTS:
 		void handle_stopped() {
 			if (m_done) {
 				return;
